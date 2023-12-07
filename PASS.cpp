@@ -1,32 +1,30 @@
 #include "Server.hpp"
 
-int Server::pass(std::string &str, Client &client)
+int Server::pass(std::string args, Client &client)
 {
-    if (str.empty())
+    std::stringstream   ss(args);
+
+    ss >> args;
+
+    if (args.empty())
     {
-        FD_SET(client.cliFd, &writeFds);
-        client.incomingMessages.push_back("ERR_NEEDMOREPARAMS");
+        client.newMessage(ERR_NEEDMOREPARAMS(std::string("PASS")), this->writeFds);
         return (0);
     }
-    else if (client.auth == 1)
+    else if (client.auth)
     {
-        FD_SET(client.cliFd, &writeFds);
-        client.incomingMessages.push_back("ERR_ALREADYREGISTRED");
+        client.newMessage(ERR_ALREADYREGISTRED, this->writeFds);
         return (0);
     }
-    else if (this->serverPass == str)
-    {
-        std::cout << "Auth Successfully!" << std::endl;
-        client.auth = 1;
-        FD_SET(client.cliFd, &writeFds);
-        client.incomingMessages.push_back("Auth Succesfully!\n");
-        return (1);
-    }
-    else
+    else if (this->serverPass != args)
     {
         std::cout << "Auth Failed!" << std::endl;
-        FD_SET(client.cliFd, &writeFds);
-        client.incomingMessages.push_back("Auth Failed\n");
+        client.newMessage("Auth Failed\r\n", this->writeFds);
         return (0);
     }
+    std::cout << "Auth Successfully!" << std::endl;
+    client.auth = 1;
+    client.newMessage("Auth Succesfully!\r\n", this->writeFds);
+    return (1);
+
 }

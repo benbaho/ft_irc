@@ -1,5 +1,22 @@
 #include "Server.hpp"
-#include <sstream>
+
+std::string    strLower(const std::string &str)
+{
+    std::string lowerStr(str);
+
+    for (std::string::iterator it = lowerStr.begin(); it != lowerStr.end(); it++)
+    {
+        if (isalpha(*it))
+            *it = tolower(*it);
+        else if (*it == '[')
+            *it = '{';
+        else if (*it == ']')
+            *it = '}';
+        else if (*it == '\\')
+            *it = '|';
+    }
+    return(lowerStr);
+}
 
 std::string stringTrim(char *buff)
 {
