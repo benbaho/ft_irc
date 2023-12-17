@@ -40,3 +40,18 @@ void    printDec(std::string str)
     }
     std::cout << "\n" << std::flush;
 }
+
+// MODE 
+
+std::string getMaskNick(std::string mask)
+{
+    std::stringstream           ss(mask);
+    std::string                 nick;
+    std::string::size_type      pos = mask.rfind('!');
+
+    if (pos != std::string::npos)
+        nick = mask.substr(0, pos);
+    else
+        nick = mask;
+    return(nick.empty() ? std::string("*") : nick);
+}

@@ -52,24 +52,18 @@ std::string Client::getNick()
     return this->nick;
 }
 
-std::string Client::getPrefix(std::string command, std::string args)
+std::string Client::getPrefix()
 {
-    std::string prefix(":" + this->nick + "!" + this->userName + "@" + this->hostName + " " + command + " " + args + "\r\n");
-
-    // std::cout << prefix << std::endl;
-    
-    return (prefix);
+    std::string prefix(this->nick + "!" + this->userName + "@" + this->ip);
+    return(prefix);
 }
 
-// void Client::setNickname(std::string s){
-//     this->nickname = s;
-// }
-
-int Client::setNick(std::string &nick)
+int Client::setNick(std::string &nick, fd_set &writeFds)
 {
     for (std::string::iterator it = nick.begin(); it != nick.end(); it++)
         if ((*it != '-' && *it != '[' && *it != ']' && *it != '\\' && *it != '`' && *it != '{' && *it != '}' && *it != '|') && !isalnum(*it))
             return (0);
+    this->newMessage(RPL_NICK(this->nick, nick), writeFds);
     if (this->auth)
         this->nick = nick;
     return (1);
@@ -88,7 +82,7 @@ void    Client::removeJoinedChannel(const std::string &name)
     for (std::vector<Channel *>::iterator   channelIt = this->joinedChannels.begin(); channelIt != this->joinedChannels.end(); channelIt++)
     {
         if ((*channelIt)->name == name)
-        {
+        {   
             this->joinedChannels.erase((channelIt));
             break;
         }

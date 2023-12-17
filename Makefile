@@ -26,6 +26,9 @@ clean:
 fclean: clean
 	@rm -rf $(NAME)
 
+run: all
+	./ircserv 2423 alper
+
 re: fclean all
 
 .PHONY: re clean fclean all	

@@ -5,13 +5,13 @@
 
 // ERR_NEEDMOREPARAMS --> (Daha fazla parametre gerekiyor)      [+]
 // ERR_BANNEDFROMCHAN --> (Kanalda banlısınız)                  [ ]
-// ERR_INVITEONLYCHAN --> (Sadece davet edilenler girebilir)    [ ]
-// ERR_BADCHANNELKEY --> (Kanal şifresi yanlış girildi)         [ ]
-// ERR_CHANNELISFULL --> (Kanalın kullanıcı limiti dolu)        [ ]
+// ERR_INVITEONLYCHAN --> (Sadece davet edilenler girebilir)    [+]
+// ERR_BADCHANNELKEY --> (Kanal şifresi yanlış girildi)         [+]
+// ERR_CHANNELISFULL --> (Kanalın kullanıcı limiti dolu)        [+]
 // ERR_BADCHANMASK --> (Kanal ismi yanlış girildi)              [ ]
-// ERR_NOSUCHCHANNEL --> (Böyle bir kanal bulunmuyor)           [ ]
+// ERR_NOSUCHCHANNEL --> (Böyle bir kanal bulunmuyor)           [+]
 // ERR_TOOMANYCHANNELS --> (Çok fazla kanalda bulunuyorsunuz)   [ ]
-// RPL_TOPIC --> (Başlık mesajı verilir)                        [ ]
+// RPL_TOPIC --> (Başlık mesajı verilir)                        [+]
 
 // İkinci Channel a girildiğinde user list güncellenmiyor !!!
 
@@ -65,26 +65,35 @@ int Server::join(std::string args, Client &client)
                     newChannel.setKey(it->key);
                     newChannel.users.push_back(&client);
                     this->channels.push_back(newChannel);
-                    client.joinedChannels.push_back(&(*this->channels.begin()));
-                    client.newMessage(client.getPrefix("JOIN", it->name), this->writeFds);
-                    (*this->channels.begin()).operators.push_back(&client);
-                    (*this->channels.begin()).updateUserList(this->writeFds);
+
+                    client.joinedChannels.push_back(&(this->channels.back()));
+                    client.newMessage(JOIN(client.getPrefix(), it->name), this->writeFds);
+                    this->channels.back().operators.push_back(&client);
+                    client.newMessage(RPL_NAMREPLY(client.getNick(), newChannel.name, this->channels.back().getUserList()),this->writeFds);//check
+                    client.newMessage(RPL_ENDOFNAMES(client.getNick(), newChannel.name) , this->writeFds);
                 }
-                else
+                else if (!channelIt->isInviteOnly || channelIt->isInvitedUser(client.cliFd))
                 {
                     if (channelIt->compareKeys(it->key))
                     { 
-                        channelIt->users.push_back(&client);
-                        client.newMessage(client.getPrefix("JOIN", it->name), this->writeFds);
-                        client.joinedChannels.push_back(&(*this->channels.begin()));
-                        channelIt->updateUserList(this->writeFds);
-                        if (!channelIt->topic.empty())
-                            client.newMessage(RPL_TOPIC(client.getNick(), channelIt->name, channelIt->topic), this->writeFds);
-
+                        if (channelIt->userLimit == 0 || channelIt->users.size() + 1 <= channelIt->userLimit)
+                        {
+                            channelIt->users.push_back(&client);
+                            channelIt->sendMessageAllUsers(this->writeFds, WITH_MSG_SENDER, JOIN(client.getPrefix(), it->name));
+                            client.joinedChannels.push_back(&(*this->channels.begin()));
+                            client.newMessage(RPL_NAMREPLY(client.getNick(), channelIt->name, channelIt->getUserList()),this->writeFds);
+                            client.newMessage(RPL_ENDOFNAMES(client.getNick(), channelIt->name) , this->writeFds);
+                            if (!channelIt->topic.empty())
+                                client.newMessage(RPL_TOPIC(client.getNick(), channelIt->name, channelIt->topic), this->writeFds);
+                        }
+                        else
+                            client.newMessage(ERR_CHANNELISFULL(client.getNick(), channelIt->name), this->writeFds);
                     }
                     else
                         client.newMessage(ERR_BADCHANNELKEY(channelIt->name), this->writeFds);
                 }
+                else
+                    client.newMessage(ERR_INVITEONLYCHAN(client.getNick(), channelIt->name), this->writeFds);
             }
             else
                 client.newMessage(ERR_NOSUCHCHANNEL(it->name), this->writeFds);

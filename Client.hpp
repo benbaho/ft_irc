@@ -27,13 +27,14 @@ class Client
         std::queue<std::string>     incomingMessages;
         std::vector<Channel *>      joinedChannels;
         std::string                 buffer;
+        std::string                 ip;
 
         Client();
         ~Client();
         
         bool        compareNick(const std::string &username);
         void        newMessage(const std::string &message, fd_set &writeFds);
-        int         setNick(std::string &username);
+        int         setNick(std::string &username, fd_set &writeFds);
 
         bool        isRegistered();
         void        setUserInfo(std::vector<std::string> userInfoVec);
@@ -49,5 +50,6 @@ class Client
         std::string getServername();
         std::string getUserinfo();
 
-        std::string getPrefix(std::string command, std::string args);
+        // std::string getPrefix(std::string command, std::string args);
+        std::string getPrefix();
 };

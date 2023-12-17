@@ -7,6 +7,8 @@
 // RPL_TOPIC --> (Başlık mesajı verilir)					[+]
 // ERR_CHANOPRIVSNEEDED --> (Kanal operatörü değilsiniz)	[+]
 
+
+
 int Server::topic(std::string args, Client &client)
 {
 	std::stringstream               ss(args);
@@ -25,14 +27,16 @@ int Server::topic(std::string args, Client &client)
 	if (channelIt != this->channels.end())
 	{
 		if (channelIt->findUser(client.cliFd) == channelIt->users.end())
-			client.newMessage(ERR_NOTONCHANNEL(channelIt->name), this->writeFds);
+			client.newMessage(ERR_NOTONCHANNEL(client.getNick(),channelIt->name), this->writeFds);
 		else if (!ss.eof())
 		{
-			ss >> tmp;
-			if (channelIt->isOperator(client.cliFd))
-				channelIt->topic = tmp;
-			else
+			if (channelIt->isTopicOperatorOnly && !channelIt->isOperator(client.cliFd))
 				client.newMessage(ERR_CHANOPRIVSNEEDED(client.getNick(), channelIt->name), this->writeFds);
+			else
+			{
+				channelIt->topic = &ss.str().at(ss.str().find(':') + 1);
+				channelIt->sendMessageAllUsers(this->writeFds, WITH_MSG_SENDER, TOPIC(client.getNick(), client.getUsername(), client.ip, channelIt->name, channelIt->topic));
+			}
 		}
 		else if (channelIt->topic.empty() && ss.eof())
 			client.newMessage(RPL_NOTOPIC(client.getNick(), channelIt->name), this->writeFds);

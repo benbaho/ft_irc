@@ -39,9 +39,11 @@ int Server::user(std::string args, Client &client)
     }
     else if (!client.isRegistered())
     {
-        client.newMessage(ERR_ALREADYREGISTRED, this->writeFds);
+        client.newMessage(ERR_ALREADYREGISTRED(client.getNick()), this->writeFds);
         return (0);
     }
     client.setUserInfo(userMsgVec);
+    if (!(client.getNick().empty()))
+        this->info(args, client);
     return (1);
 }

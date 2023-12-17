@@ -13,7 +13,7 @@ int Server::pass(std::string args, Client &client)
     }
     else if (client.auth)
     {
-        client.newMessage(ERR_ALREADYREGISTRED, this->writeFds);
+        client.newMessage(ERR_ALREADYREGISTRED(client.getNick()), this->writeFds);
         return (0);
     }
     else if (this->serverPass != args)
@@ -24,7 +24,6 @@ int Server::pass(std::string args, Client &client)
     }
     std::cout << "Auth Successfully!" << std::endl;
     client.auth = 1;
-    client.newMessage("Auth Succesfully!\r\n", this->writeFds);
-    return (1);
+    return (1); 
 
 }

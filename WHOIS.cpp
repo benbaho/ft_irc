@@ -8,26 +8,26 @@
 
 int     Server::whois(std::string args, Client &client)
 {
-    std::stringstream ss(args);
-    std::string tmp;
-    int i = 0;
-    
-    while (ss >> tmp)
-        i++;
+    std::stringstream ss(args); 
+    std::vector<std::string>    tmp;
+    std::string msg;
 
-    if (i == 0 || i > 2)
+     while(getline(ss, msg, ' '))
+        tmp.push_back(msg);
+
+    if (tmp.size() == 0 || tmp.size() > 2)
     {
-        client.newMessage(ERR_NONICKNAMEGIVEN, this->writeFds);
+        client.newMessage(ERR_NONICKNAMEGIVEN, this->writeFds); 
         return (0);
     }
     else 
     {
         std::list<Client>::iterator it = this->getUserIterator(args.substr(0, args.find(' ')));
-        if ((*it).compareNick(args.substr(0, args.find(' '))))
+        if (it != this->clients.end() && (*it).compareNick(args.substr(0, args.find(' '))))
         {
             client.newMessage(RPL_WHOISUSER(client.getNick(), (*it).getNick(), (*it).getUsername(), (*it).getHostname(), (*it).getRealname()), this->writeFds);
-            client.newMessage(RPL_WHOISSERVER(client.getNick(), (*it).getNick(), (*it).getHostname(),  std::string("alper")),  this->writeFds);
-            client.newMessage(RPL_WHOISACCOUNT(client.getNick(), (*it).getNick(), (*it).getUsername()), this->writeFds);
+            client.newMessage(RPL_WHOISSERVER(client.getNick(), (*it).getNick(), (*it).getServername(),  std::string("server")),  this->writeFds);
+            client.newMessage(RPL_ENDOFWHOIS(client.getNick(), (*it).getNick()), this->writeFds);
             return (1);
         }
         else

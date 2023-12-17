@@ -5,6 +5,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 
@@ -38,26 +39,26 @@ int     Server::addNewClient(fd_set &readFdsTmp)
     if (FD_ISSET(this->serverFd, &readFdsTmp))
     {
         Client              tmp;
-        // struct  sockaddr    newClientInfo;
-        // socklen_t           len;
+        struct  sockaddr    newClientInfo;
+        socklen_t           len;
 
-        tmp.cliFd = accept(this->serverFd, NULL, NULL);
-        // tmp.cliFd = accept(this->serverFd, &newClientInfo, &len);
+        // tmp.cliFd = accept(this->serverFd, NULL, NULL);
+        tmp.cliFd = accept(this->serverFd, &newClientInfo, &len);
         if (tmp.cliFd == -1)
             std::cout << "Client Error!" << std::endl;
+        else if (fcntl(tmp.cliFd, F_SETFL, O_NONBLOCK) < 0)
+            std::cout << "Fcntl Error!" << std::endl;
         else
         {
-            // char clientIP[INET_ADDRSTRLEN];
+            char clientIp[INET_ADDRSTRLEN];
 
             std::cout << "New Client Connected!" << std::endl;
-            this->clients.push_back(tmp);
             FD_SET(tmp.cliFd, &(this->readFds));
-            // if (newClientInfo.sa_family == AF_INET)
-            // {
-            //     struct sockaddr_in *clientAddr = (struct sockaddr_in *)&newClientInfo;
-            //     inet_ntop(AF_INET, &(clientAddr->sin_addr), clientIP, INET_ADDRSTRLEN);
-            //     std::cout << clientIP << std::endl;
-            // }
+            struct sockaddr_in *clientAddr = (struct sockaddr_in *)&newClientInfo;
+            inet_ntop(AF_INET, &(clientAddr->sin_addr), clientIp, INET_ADDRSTRLEN);
+            tmp.ip = clientIp;
+            std::cout << clientIp << std::endl;
+            this->clients.push_back(tmp);
         }
         return (1);
     }
@@ -79,6 +80,11 @@ Server::Server(int port, const char *pass) : serverPass(pass)
     this->functionsMap["TOPIC"] = &Server::topic;
     this->functionsMap["WHOIS"] = &Server::whois;
     this->functionsMap["MODE"] = &Server::mode;
+    this->functionsMap["NOTICE"] = &Server::notice;
+    this->functionsMap["KICK"] = &Server::kick;
+    this->functionsMap["INVITE"] = &Server::invite;
+    this->functionsMap["INFO"] = &Server::info;
+    this->functionsMap["LIST"] = &Server::list;
 
 
     //other
@@ -91,13 +97,14 @@ Server::Server(int port, const char *pass) : serverPass(pass)
 
 int     Server::readFromClients(fd_set  &readFdsTmp)
 {
-    char    buffer[2048];//niye 2048 ?
+    char    buffer[2048];
     int     readByte;
 
     for (std::list<Client>::iterator it = this->clients.begin(); it != this->clients.end(); it++)
     {
         if (FD_ISSET(it->cliFd, &readFdsTmp))
         {
+            // readByte = recv(it->cliFd, buffer, 2047, 0);
             readByte = read(it->cliFd, buffer, 2047);
             if (readByte <= 0)
             {
@@ -135,17 +142,11 @@ int     Server::readFromClients(fd_set  &readFdsTmp)
                         args.clear();
                     if ((functionsMap[command]))
                     {
-                        (this->*functionsMap[command])(args, *it);
+                        if ((command != "PASS" && (*it).auth == 1) || command == "PASS" || command == "QUIT")
+                            (this->*functionsMap[command])(args, *it);
+
                     }
                 }
-                // for (std::vector<Client>::iterator itt = clients.begin(); itt != clients.end(); itt++)
-                // {
-                //     if ((*it).cliFd != (*itt).cliFd && (*itt).auth == 1)
-                //     {
-                //         (*itt).incomingMessages.push_back(buffer);
-                //         FD_SET((*itt).cliFd, &(this->writeFds));
-                //     }
-                // }
             }
             return (1);
         }
@@ -161,6 +162,7 @@ int     Server::writeClients(fd_set &writeFdsTmp)
     {
         if (FD_ISSET(it->cliFd, &writeFdsTmp))
         {
+            // writeByte = send(it->cliFd, (it->incomingMessages.front()).c_str(), (it->incomingMessages.front()).length(), 0);
             writeByte = write(it->cliFd, (it->incomingMessages.front()).c_str(), (it->incomingMessages.front()).length());
             if (writeByte < 0)
             {
@@ -199,6 +201,11 @@ void    Server::createSocket(int port)
         std::cout << "Socket Cannot Created!" << std::endl;
         exit(1);
     }
+    if (fcntl(this->serverFd, F_SETFL, O_NONBLOCK) < 0)
+    {
+        std::cout << "Fcntl Error!" << std::endl;
+        exit(1);
+    }
     if (setsockopt(this->serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
         std::cerr << "Error setting SO_REUSEADDR option" << std::endl;
@@ -211,7 +218,7 @@ void    Server::createSocket(int port)
         close(this->serverFd);
         exit(1);
     }
-    if (listen(this->serverFd, 512) == -1)//neden 512
+    if (listen(this->serverFd, 512) == -1) //neden 512
     {
         std::cout << "Listen Error!" << std::endl;
         close(this->serverFd);
