@@ -1,4 +1,4 @@
-# ft_irc readme will be edited
+# ft_irc
 
 #sources
 
