@@ -10,14 +10,15 @@ together to form a network.
 
 Based on HexChat Client - RFC1459
 
+
+made by bdurmus and ademirci with love
+
 #sources
-
-
 https://www.rfc-editor.org/info/rfc1459
-
 
 https://script.quakenet.org/wiki
 
 https://docs.dal.net/maintr.htm
 
 % valgrind -s --leak-check=full --tool=memcheck ./ircserv 
+
