@@ -8,7 +8,7 @@ IRC clients connect to IRC servers in order to join channels. IRC servers are co
 together to form a network.
 
 
-
+Based on HexChat Client - RFC1459
 
 #sources
 
